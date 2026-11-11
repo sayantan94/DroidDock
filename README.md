@@ -3,8 +3,8 @@
 **Your Android files, a little closer to home.**
 
 A native USB file-transfer app for **macOS and Windows**. Browse your phone, see
-folder sizes, and copy photos, videos, music, documents, and downloads in either
-direction. Works with Android's standard **File transfer / MTP** mode, including
+folder sizes, group files by month, copy content in either direction, and delete
+selected files from your phone. Works with Android's standard **File transfer / MTP** mode, including
 phones running OxygenOS 14. No phone companion app, account, Wi-Fi, or USB debugging
 required.
 
@@ -75,7 +75,8 @@ and choose **Photo library** in DroidDock.
 | PTP thumbnail library / download history | Yes | Not included |
 | Runtime installation | Bundled USB libraries | Self-contained; no separate .NET install |
 
-**Early release:** automated tests cover file safety and folder-size calculation.
+**Early release:** automated tests cover file safety, folder-size calculation,
+monthly grouping, and the confirmed deletion queue.
 Mac USB browsing, recursive sizes, and interrupting scans have been checked with
 a OnePlus 9R running OxygenOS 14. The Windows build passes its tests and starts
 successfully on a Windows runner; Windows USB transfers still need validation
