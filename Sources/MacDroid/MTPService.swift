@@ -124,10 +124,44 @@ final class MTPService: @unchecked Sendable {
             file = f.next
             LIBMTP_destroy_file_t(current)
         }
+        // libmtp's bulk API can skip individual objects whose metadata failed.
+        // Do not use that incomplete list to report a successful folder total.
+        if LIBMTP_Get_Errorstack(device) != nil { throw failure("Couldn’t read every item in this folder") }
         return result.sorted { a, b in a.isFolder != b.isFolder ? a.isFolder : a.name.localizedStandardCompare(b.name) == .orderedAscending }
     }
     func list(storage: UInt32, parent: UInt32) async throws -> [RemoteFile] {
         try await work { [self] in try listSync(storage: storage, parent: parent) }
+    }
+
+    /// Unlike the bulk listing API, this yields between individual metadata
+    /// reads. A background scan of a large folder cannot monopolize USB while
+    /// the user navigates or starts a transfer. Failed metadata is never skipped.
+    func sizeEntries(storage: UInt32, parent: UInt32) async throws -> [SizeEntry] {
+        try Task.checkCancellation()
+        let handles: [UInt32] = try await work { [self] in
+            guard let device else { throw ImportError.disconnected }
+            LIBMTP_Clear_Errorstack(device)
+            var pointer: UnsafeMutablePointer<UInt32>?
+            let count = LIBMTP_Get_Children(device, storage, parent, &pointer)
+            defer { free(pointer) }
+            guard count >= 0 else { throw failure("Couldn’t read folder size") }
+            guard count > 0, let pointer else { return [] }
+            return Array(UnsafeBufferPointer(start: pointer, count: Int(count)))
+        }
+        var entries: [SizeEntry] = []
+        for id in handles {
+            try Task.checkCancellation()
+            let entry: SizeEntry = try await work { [self] in
+                guard let device else { throw ImportError.disconnected }
+                LIBMTP_Clear_Errorstack(device)
+                guard let metadata = LIBMTP_Get_Filemetadata(device, id) else { throw failure("Couldn’t read file size") }
+                defer { LIBMTP_destroy_file_t(metadata) }
+                return SizeEntry(id: String(id), bytes: metadata.pointee.filesize, isFolder: metadata.pointee.filetype == LIBMTP_FILETYPE_FOLDER)
+            }
+            entries.append(entry)
+        }
+        try Task.checkCancellation()
+        return entries
     }
 
     func download(_ file: RemoteFile, to directory: URL, progress: @escaping (Double) -> Void) async throws -> URL {

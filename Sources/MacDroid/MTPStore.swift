@@ -163,8 +163,8 @@ final class MTPStore: ObservableObject {
         sizeTask = Task { [weak self, service] in
             do {
                 let result = try await FolderSizeCalculator.calculate(root: root) { id in
-                    let files = id == root ? initial : try await service.list(storage: storage, parent: UInt32(id)!)
-                    return files.map { SizeEntry(id: String($0.id), bytes: $0.size, isFolder: $0.isFolder) }
+                    if id == root { return initial.map { SizeEntry(id: String($0.id), bytes: $0.size, isFolder: $0.isFolder) } }
+                    return try await service.sizeEntries(storage: storage, parent: UInt32(id)!)
                 }
                 guard let self, self.sizeGeneration == generation else { return }
                 self.folderSizes = result; self.calculatingSize = false

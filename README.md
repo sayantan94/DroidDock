@@ -59,8 +59,10 @@ and choose **Photo library** in DroidDock.
 | Runtime installation | Bundled USB libraries | Self-contained; no separate .NET install |
 
 **Early release:** automated tests cover file safety and folder-size calculation.
-Physical USB transfers and device compatibility still need validation on real
-hardware, especially Windows. Screenshots use sample files, not a connected phone.
+Mac USB browsing, recursive sizes, and interrupting scans have been checked with
+a OnePlus 9R running OxygenOS 14. The Windows build passes its tests and starts
+successfully on a Windows runner; Windows USB transfers still need validation
+with a physical phone. Screenshots use sample files, not a connected phone.
 
 Android exposes shared storage through MTP. Private app data and files that exist
 only in cloud services are not available. Folder sizes cover the files Android
@@ -164,5 +166,6 @@ scripts/                    Mac build, icon, and library packaging
 
 DroidDock's code is [MIT licensed](LICENSE). See
 [third-party notices](THIRD_PARTY_NOTICES.md) for USB libraries and Windows
-components. DroidDock is an independent project and is not affiliated with the
+components. Mac downloads are accompanied by `DroidDock-USB-library-sources.zip`,
+containing corresponding library sources and build recipes. DroidDock is an independent project and is not affiliated with the
 commercial MacDroid application or OnePlus.

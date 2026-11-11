@@ -29,10 +29,16 @@
         <TextBlock x:Name="PathLabel" Text="Connect your Android phone to begin" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="10,0,0,0"/>
       </DockPanel>
       <DockPanel Grid.Row="2" Margin="0,0,0,14">
-        <TextBox x:Name="SearchBox" DockPanel.Dock="Right" Width="200" TextChanged="Search_Changed" ToolTip="Search this folder" AutomationProperties.Name="Search this folder"/>
+        <Grid DockPanel.Dock="Right" Width="200">
+          <TextBox x:Name="SearchBox" TextChanged="Search_Changed" ToolTip="Search this folder" AutomationProperties.Name="Search this folder"/>
+          <TextBlock Text="Search this folder" IsHitTestVisible="False" Margin="11,0" VerticalAlignment="Center" Foreground="#657669">
+            <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Text, ElementName=SearchBox}" Value=""><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></TextBlock.Style>
+          </TextBlock>
+        </Grid>
         <StackPanel VerticalAlignment="Center"><TextBlock x:Name="SizeLabel" Text="Everything you keep on your phone." FontWeight="SemiBold"/><TextBlock x:Name="CountLabel" Text="Folder totals include files in every subfolder." Foreground="#657669" FontSize="11" Margin="0,4,0,0"/></StackPanel>
       </DockPanel>
       <DataGrid x:Name="FilesGrid" Grid.Row="3" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Extended" SelectionUnit="FullRow" CanUserAddRows="False" CanUserDeleteRows="False" CanUserReorderColumns="False" HeadersVisibility="Column" GridLinesVisibility="None" RowHeight="48" ColumnHeaderHeight="36" BorderThickness="0" Background="#FAFBF8" RowBackground="#FFFFFF" AlternatingRowBackground="#F3F6F0" HorizontalScrollBarVisibility="Disabled" MouseDoubleClick="Files_DoubleClick" SelectionChanged="Files_SelectionChanged">
+        <DataGrid.Resources><Style TargetType="TextBlock"><Setter Property="VerticalAlignment" Value="Center"/><Setter Property="Margin" Value="10,0"/></Style></DataGrid.Resources>
         <DataGrid.Columns><DataGridTextColumn Header="Name" Binding="{Binding DisplayName}" Width="*"/><DataGridTextColumn Header="Size" Binding="{Binding Size}" Width="140"/><DataGridTextColumn Header="Modified" Binding="{Binding Modified}" Width="135"/></DataGrid.Columns>
       </DataGrid>
       <StackPanel Grid.Row="4" Margin="0,18,0,18"><TextBlock x:Name="StatusLabel" Text="No account, no companion app. Just USB file transfer." TextWrapping="Wrap" Foreground="#657669"/><ProgressBar x:Name="Progress" Height="4" Margin="0,10,0,0" Foreground="#226B57" Visibility="Collapsed"/></StackPanel>

@@ -35,9 +35,13 @@ public sealed class PhoneService
     public Task<IReadOnlyList<PhoneEntry>> List(string path, CancellationToken token = default) => Work<IReadOnlyList<PhoneEntry>>(() =>
     {
         var folder = path == "\\" ? Device.GetRootDirectory() : Device.GetDirectoryInfo(path);
-        return folder.EnumerateFileSystemInfos().Select(item => new PhoneEntry(item.FullName, item.Name,
-            item is MediaDirectoryInfo, item.Length, item.LastWriteTime)).OrderByDescending(e => e.IsFolder)
-            .ThenBy(e => e.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
+        var entries = new List<PhoneEntry>();
+        foreach (var item in folder.EnumerateFileSystemInfos())
+        {
+            token.ThrowIfCancellationRequested();
+            entries.Add(new(item.FullName, item.Name, item is MediaDirectoryInfo, item.Length, item.LastWriteTime));
+        }
+        return entries.OrderByDescending(e => e.IsFolder).ThenBy(e => e.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
     }, token);
 
     public Task Download(PhoneEntry entry, string temporary) => Work(() =>
