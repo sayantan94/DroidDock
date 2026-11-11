@@ -10,6 +10,7 @@
   <ItemGroup>
     <PackageReference Include="MediaDevices" Version="2.0.0" />
     <ProjectReference Include="../DroidDock.Core/DroidDock.Core.csproj" />
+    <Content Include="../scripts/*.cmd" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
     <Content Include="../../THIRD_PARTY_NOTICES.md" Link="THIRD_PARTY_NOTICES.md" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="../../LICENSE" Link="LICENSE" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>

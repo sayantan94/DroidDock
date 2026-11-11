@@ -39,13 +39,18 @@ jobs:
         run: dotnet run --project windows/DroidDock.Tests -c Release
       - name: Publish standalone Windows app
         run: dotnet publish windows/DroidDock.Windows -c Release -r win-x64 --self-contained true -o dist/windows
-      - name: Smoke test and capture sample UI
+      - name: Test one-click setup, shortcuts, launcher, and sample UI
         shell: pwsh
+        timeout-minutes: 3
         run: |
           $capturePath = Join-Path $pwd 'dist/windows-files.png'
-          $process = Start-Process -FilePath 'dist/windows/DroidDock.exe' -ArgumentList @('--screenshot', "`"$capturePath`"") -PassThru
-          if (-not $process.WaitForExit(60000)) { $process.Kill(); throw 'Screenshot smoke test timed out' }
-          if ($process.ExitCode -ne 0 -or -not (Test-Path $capturePath)) { throw 'App startup or screenshot export failed' }
+          $testInstallPath = Join-Path $env:RUNNER_TEMP 'DroidDock Setup Test'
+          & cmd.exe /d /c dist\windows\Setup.cmd --smoke-test "$testInstallPath"
+          if ($LASTEXITCODE -ne 0) { throw 'One-click setup smoke test failed' }
+          Copy-Item (Join-Path $testInstallPath 'setup-smoke.png') $capturePath
+          $shell = New-Object -ComObject WScript.Shell
+          $shortcut = $shell.CreateShortcut((Join-Path $testInstallPath 'test-shortcuts/Desktop/DroidDock.lnk'))
+          if ($shortcut.TargetPath -ne (Join-Path $testInstallPath 'DroidDock.exe')) { throw 'Shortcut points to the wrong app' }
           Compress-Archive -Path dist/windows/* -DestinationPath dist/DroidDock-Windows-x64.zip
       - uses: actions/upload-artifact@v4
         with:

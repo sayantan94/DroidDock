@@ -79,8 +79,17 @@ Development builds are also available as artifacts on successful
 - **Mac:** unzip and move `DroidDock.app` to Applications. Use the build matching
   your processor. Builds are locally signed but not Apple-notarized; macOS may
   require approval in System Settings → Privacy & Security on first launch.
-- **Windows:** unzip the complete folder and run `DroidDock.exe`. The app is not
-  code-signed, so Windows may ask you to confirm the publisher before opening it.
+- **Windows:** unzip the complete folder, then **double-click `Setup.cmd`**.
+  It installs to `%LOCALAPPDATA%\DroidDock`, creates Desktop and Start menu
+  shortcuts, and launches the app. No administrator access, command typing, or
+  separate .NET install is needed. For portable use, double-click `Launch.cmd`
+  in the extracted folder instead. The app is not code-signed, so Windows may
+  ask you to confirm the publisher before opening it.
+
+To update Windows, finish any transfers, close DroidDock, and run the new
+download's `Setup.cmd`. To remove it, close the app, delete
+`%LOCALAPPDATA%\DroidDock`, and remove its Desktop and Start menu shortcuts.
+Copied files in your chosen destination are separate from the app installation.
 
 ## Build from source
 
@@ -120,7 +129,8 @@ To preview without a phone, run `DroidDock.exe --demo`. Generate a screenshot wi
 access USB devices or transfer real files.
 
 GitHub Actions builds both platforms, runs their tests, packages downloadable
-apps, and starts the Windows sample interface to capture a screenshot.
+apps, and tests Windows setup in an isolated folder (including a path with
+spaces), shortcut creation, launching, and capturing the sample interface.
 
 ## Screenshots
 
