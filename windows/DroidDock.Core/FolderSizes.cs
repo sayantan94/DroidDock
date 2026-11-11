@@ -1,6 +1,7 @@
 namespace DroidDock.Core;
 
-public record PhoneEntry(string Path, string Name, bool IsFolder, ulong Bytes, DateTime? Modified = null);
+public record PhoneEntry(string Path, string Name, bool IsFolder, ulong Bytes, DateTime? Modified = null,
+    string ObjectId = "", string PersistentId = "");
 public record FolderTotal(ulong Bytes, int Files);
 
 public static class FolderSizes

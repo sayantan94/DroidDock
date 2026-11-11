@@ -35,3 +35,36 @@ try
 }
 finally { Directory.Delete(destination, true); }
 Console.WriteLine("PASS: recursive sizes, empty folders, unreadable folders, cycles, cancellation, collisions, partial downloads, empty files, and safe filenames.");
+
+PhoneEntry Target(string id, bool folder = false) => new("\\storage\\" + id, id, folder, 4, new DateTime(2026, 11, 1), id, "persistent-" + id);
+int calls = 0;
+var cancelledDelete = await FileDeletion.Run([Target("a")], false, _ => { calls++; return Task.CompletedTask; });
+Check(calls == 0 && cancelledDelete.Deleted.Count == 0, "Cancel must never touch the backend");
+foreach (PhoneEntry[] invalid in new[] { new[] { Target("a"), Target("folder", true) }, new[] { Target("a"), Target("a") } })
+{
+    var rejected = await FileDeletion.Run(invalid, true, _ => { calls++; return Task.CompletedTask; });
+    Check(calls == 0 && rejected.Failure is not null, "Reject entire invalid selection before deleting anything");
+}
+var attempted = new List<string>();
+var partial = await FileDeletion.Run([Target("a"), Target("b"), Target("c")], true, entry => {
+    attempted.Add(entry.ObjectId);
+    if (entry.ObjectId == "b") throw new IOException("Disconnected");
+    return Task.CompletedTask;
+});
+Check(attempted.SequenceEqual(new[] { "a", "b" }) && partial.Deleted.Count == 1 && partial.Failure is not null,
+    "A failure must preserve completed results and stop the batch");
+bool stopDelete = false;
+var stopped = await FileDeletion.Run([Target("a"), Target("b")], true,
+    _ => { stopDelete = true; return Task.CompletedTask; }, () => stopDelete);
+Check(stopped.Stopped && stopped.Deleted.Count == 1, "Stop finishes the current deletion only");
+FileDeletion.RequireMatch(Target("a"), Target("a"));
+foreach (var changed in new[] { Target("b"), Target("a") with { Bytes = 400 }, Target("a") with { IsFolder = true },
+    Target("a") with { Path = "\\other\\a" }, Target("a") with { ObjectId = "replacement" } })
+    await Fails<IOException>(() => { FileDeletion.RequireMatch(Target("a"), changed); return Task.CompletedTask; });
+var mixed = new[] {
+    Target("photo.jpg"), Target("document.pdf") with { Modified = new DateTime(2026, 11, 30) },
+    Target("old.mp4") with { Modified = new DateTime(2025, 11, 1) }, Target("unknown") with { Modified = null } };
+var groups = mixed.GroupBy(FileMonths.Key).OrderByDescending(g => g.Key).ToArray();
+Check(groups.Length == 3 && groups[0].Count() == 2 && groups[1].Key == 202511 && groups[2].Key == 0,
+    "All file types group by month and year, with unknown dates last");
+Console.WriteLine("PASS: cancelled deletion, folder/duplicate rejection, partial failure, stopping, changed-file checks, and monthly grouping.");

@@ -10,7 +10,8 @@ struct FileBrowserView: View {
             if store.connected {
                 locationBar
                 Divider()
-                HStack {
+                VStack(spacing: 12) {
+                  HStack {
                     Text("\(store.visible.count) items").font(.caption).foregroundStyle(.secondary)
                     if store.calculatingSize {
                         ProgressView().controlSize(.mini)
@@ -23,21 +24,42 @@ struct FileBrowserView: View {
                         Button("Size unavailable · Retry") { store.calculateSizes() }.buttonStyle(.borderless).font(.caption).help(error).disabled(store.busy)
                     }
                     Spacer()
-                    Button("Select files") { store.selection.formUnion(store.visible.filter { !$0.isFolder }.map(\.id)) }.buttonStyle(.borderless).disabled(store.busy)
-                    Button("Clear") { store.selection = [] }.buttonStyle(.borderless).disabled(store.busy || store.selection.isEmpty)
+                    Picker("Group files", selection: $store.groupByMonth) {
+                        Text("Modified month").tag(true)
+                        Text("No grouping").tag(false)
+                    }.labelsHidden().frame(width: 155).disabled(store.busy)
+                        .help("Groups all file types by the modification date reported by the phone, not the photo capture date.")
+                  }
+                  HStack {
                     HStack {
                         Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
                         TextField("Search this folder", text: $store.search).textFieldStyle(.plain)
-                    }.padding(8).frame(width: 210).background(Palette.subtle, in: RoundedRectangle(cornerRadius: 8)).padding(.leading, 10)
+                    }.padding(8).frame(maxWidth: 260).background(Palette.subtle, in: RoundedRectangle(cornerRadius: 8))
+                    Spacer()
+                    Button("Select files") { store.selection.formUnion(store.visible.filter { !$0.isFolder }.map(\.id)) }.buttonStyle(.borderless).disabled(store.busy)
+                    Button("Clear") { store.selection = [] }.buttonStyle(.borderless).disabled(store.busy || store.selection.isEmpty)
+                    Button(role: .destructive) { store.confirmDeleteSelected() } label: { Label("Delete from phone…", systemImage: "trash") }
+                        .help("Delete selected files from phone…").accessibilityLabel("Delete from phone…")
+                        .disabled(store.busy || store.selectedFiles.isEmpty || model.camera.isDemo)
+                  }
                 }.padding(.horizontal, 28).padding(.vertical, 14)
                 ScrollView {
                     LazyVStack(spacing: 3) {
-                        ForEach(store.visible) { file in fileRow(file) }
+                        if store.groupByMonth {
+                            if !store.visibleFolders.isEmpty {
+                                Text("Folders").font(.headline).frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 10)
+                                ForEach(store.visibleFolders) { file in fileRow(file) }
+                            }
+                            ForEach(store.monthGroups, id: \.month) { group in
+                                monthHeader(group.month, files: group.files)
+                                ForEach(group.files) { file in fileRow(file) }
+                            }
+                        } else { ForEach(store.visible) { file in fileRow(file) } }
                         if store.visible.isEmpty && !store.busy {
                             Text(store.search.isEmpty ? "This folder is empty." : "No matching files.").foregroundStyle(.secondary).padding(50)
                         }
                     }.padding(.horizontal, 22).padding(.bottom, 20)
-                }.overlay { if store.busy && !store.transferring { ProgressView().padding(20).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12)) } }
+                }.overlay { if store.busy && !store.transferring && !store.deleting { ProgressView().padding(20).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12)) } }
             } else {
                 VStack(spacing: 20) {
                     Image(systemName: "externaldrive.connected.to.line.below").font(.system(size: 52, weight: .ultraLight)).foregroundStyle(Palette.accent)
@@ -121,11 +143,25 @@ struct FileBrowserView: View {
         return store.calculatingSize ? "Folder · Calculating…" : "Folder · Size unavailable"
     }
 
+    private func monthHeader(_ month: FileMonth, files: [RemoteFile]) -> some View {
+        let ids = Set(files.map(\.id))
+        let allSelected = ids.isSubset(of: store.selection)
+        return HStack {
+            Text(month.title).font(.headline)
+            Text("\(files.count) \(files.count == 1 ? "file" : "files")").font(.caption).foregroundStyle(.secondary)
+            Spacer()
+            Button(allSelected ? "Clear month" : "Select month") {
+                if allSelected { store.selection.subtract(ids) } else { store.selection.formUnion(ids) }
+            }.buttonStyle(.borderless).disabled(store.busy)
+                .help("Selects the files shown in this group. Search filters apply; files in other folders are not included.")
+        }.padding(.top, 18).padding(.bottom, 8)
+    }
+
     private var footer: some View {
         VStack(alignment: .leading, spacing: 12) {
-            if store.transferring {
+            if store.transferring || store.deleting {
                 HStack {
-                    Text("Transferring \(store.completed + 1) of \(store.total) · \(store.currentFile)").font(.caption).lineLimit(1)
+                    Text("\(store.deleting ? "Deleting" : "Transferring") \(min(store.completed + 1, store.total)) of \(store.total) · \(store.currentFile)").font(.caption).lineLimit(1)
                     Spacer()
                     Button(store.stopRequested ? "Finishing this file…" : "Stop after this file") { store.stopRequested = true }.disabled(store.stopRequested)
                 }

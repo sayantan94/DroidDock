@@ -50,6 +50,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        if model?.mtp.deleting == true {
+            let alert = NSAlert()
+            alert.messageText = "Deleting files from your phone"
+            alert.informativeText = "Use Stop after this file and wait for deletion to finish before closing DroidDock."
+            alert.addButton(withTitle: "OK"); alert.runModal()
+            return .terminateCancel
+        }
         guard model?.isImporting == true || model?.mtp.transferring == true else { return .terminateNow }
         let alert = NSAlert()
         alert.messageText = "A photo transfer is still running"

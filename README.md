@@ -18,6 +18,12 @@ required.
 ## What it does
 
 - Browse shared phone storage and search the open folder.
+- Group **all file types by modified month and year**, newest first. Use **Select month**
+  to select the files shown in a group, then copy or delete them together. Folders
+  stay separate, and files without a date appear under **Unknown date**.
+- **Delete selected files from the phone** after reviewing a confirmation listing
+  every filename. Deletion is permanent; there is no Trash or undo in DroidDock.
+  Files already copied to your computer are kept.
 - Show the **total size of the open folder and each subfolder**, including nested
   files. Sizes are calculated from metadata; the app does not download files to
   measure them. Navigation and transfers cancel background scans.
@@ -43,6 +49,15 @@ Folder totals include all subfolders regardless of the current search. Large
 libraries can take time to scan. If any folder cannot be read, the app shows
 **Size unavailable** instead of a misleading partial total; use Refresh to retry.
 
+Monthly groups use the modification date reported by the phone, which may differ
+from when a photo was taken. Groups apply to files in the open folder and respect
+the current search. Select more than one month to copy or delete those files together.
+
+To delete, use **All files**, select individual files or a month, then choose
+**Delete from phone…**. Review the filename list and choose **Delete permanently**.
+Cancel is the default. A batch stops on the first error, and folder totals refresh
+afterward. **Stop after this file** stops the remaining queued deletions.
+
 For the optional Mac photo library, switch the phone to **Photo transfer / PTP**
 and choose **Photo library** in DroidDock.
 
@@ -55,6 +70,8 @@ and choose **Photo library** in DroidDock.
 | File transfer | libmtp + libusb | Windows Portable Devices via MediaDevices |
 | Browse, download, upload | Yes | Yes |
 | Recursive folder sizes | Yes | Yes |
+| Month groups and group selection | Yes | Yes |
+| Confirmed deletion of selected files (MTP) | Yes | Yes |
 | PTP thumbnail library / download history | Yes | Not included |
 | Runtime installation | Bundled USB libraries | Self-contained; no separate .NET install |
 
@@ -67,8 +84,10 @@ with a physical phone. Screenshots use sample files, not a connected phone.
 Android exposes shared storage through MTP. Private app data and files that exist
 only in cloud services are not available. Folder sizes cover the files Android
 shares and are a snapshot while the scan runs. This release copies individual
-files and multiple selected files; recursive folder copying, deletion, and sync
-are not implemented.
+files and multiple selected files; recursive folder copying, folder deletion,
+and sync are not implemented. Deletion is available in All files / MTP mode,
+not the optional Mac PTP photo library. The deletion workflow is covered by
+automated tests; destructive USB deletion has not been tested on personal phone files.
 
 ## Install
 

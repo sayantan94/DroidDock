@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -15,7 +16,7 @@ public partial class MainWindow : Window
     private readonly PhoneService phone = new();
     private readonly bool demo;
     private readonly string? screenshot;
-    private bool connected, busy, transferring, stop, closing;
+    private bool connected, busy, transferring, deleting, stop, closing;
     private string folder = "\\";
     private string destination = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "DroidDock");
     private IReadOnlyList<PhoneEntry> entries = [];
@@ -122,9 +123,14 @@ public partial class MainWindow : Window
         var selectedPaths = FilesGrid.SelectedItems.Cast<FileRow>().Select(r => r.Entry.Path).ToHashSet();
         var rows = entries.Where(e => e.Name.Contains(query, StringComparison.CurrentCultureIgnoreCase))
             .Select(e => new FileRow(e, e.IsFolder ? sizes.TryGetValue(e.Path, out var size) ? FolderSizes.Format(size.Bytes) : "—" : FolderSizes.Format(e.Bytes))).ToList();
-        FilesGrid.ItemsSource = rows;
+        bool monthly = GroupMode.SelectedIndex == 0;
+        if (monthly) rows = rows.OrderByDescending(r => FileMonths.Key(r.Entry)).ThenBy(r => r.Entry.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
+        var view = CollectionViewSource.GetDefaultView(rows);
+        if (monthly) view.GroupDescriptions.Add(new PropertyGroupDescription(nameof(FileRow.Month)));
+        FilesGrid.ItemsSource = view;
+        FilesGrid.CanUserSortColumns = !monthly;
         foreach (var row in rows.Where(r => selectedPaths.Contains(r.Entry.Path))) FilesGrid.SelectedItems.Add(row);
-        CountLabel.Text = $"{rows.Count} items · totals include all subfolders";
+        CountLabel.Text = $"{rows.Count} items · {(monthly ? "grouped by phone’s modified date" : "totals include all subfolders")}";
         UpdateControls();
     }
 
@@ -138,6 +144,58 @@ public partial class MainWindow : Window
         DestinationButton.IsEnabled = !busy;
         CopyButton.IsEnabled = connected && !demo && !busy && FilesGrid.SelectedItems.Cast<FileRow>().Any(r => !r.Entry.IsFolder);
         SendButton.IsEnabled = connected && !demo && !busy && folder != "\\";
+        DeleteButton.IsEnabled = connected && !demo && !busy && FilesGrid.SelectedItems.Count > 0 &&
+            FilesGrid.SelectedItems.Cast<FileRow>().All(r => !r.Entry.IsFolder);
+        GroupMode.IsEnabled = !busy;
+    }
+
+    private void Grouping_Changed(object sender, SelectionChangedEventArgs e) => ApplyFilter();
+    private void SelectMonth_Click(object sender, RoutedEventArgs e)
+    {
+        if (busy || sender is not FrameworkElement { DataContext: CollectionViewGroup group }) return;
+        foreach (var row in group.Items.OfType<FileRow>().Where(r => !r.Entry.IsFolder))
+            if (!FilesGrid.SelectedItems.Contains(row)) FilesGrid.SelectedItems.Add(row);
+    }
+    private void ClearMonth_Click(object sender, RoutedEventArgs e)
+    {
+        if (busy || sender is not FrameworkElement { DataContext: CollectionViewGroup group }) return;
+        foreach (var row in group.Items.OfType<FileRow>().Where(r => !r.Entry.IsFolder)) FilesGrid.SelectedItems.Remove(row);
+    }
+
+    private async void Delete_Click(object sender, RoutedEventArgs e)
+    {
+        if (demo || busy || !connected) return;
+        var selected = FilesGrid.SelectedItems.Cast<FileRow>().Select(r => r.Entry).ToArray();
+        if (selected.Length == 0 || selected.Any(e => e.IsFolder)) return;
+        // Freeze the selection and pause background updates while confirmation is open.
+        await Run(async () =>
+        {
+            CancelScan();
+            var confirmation = new DeleteConfirmation(this, DeviceLabel.Text, folder, selected);
+            if (confirmation.ShowDialog() != true) { StartScan(); return; }
+            deleting = true; stop = false;
+            Progress.Visibility = StopButton.Visibility = Visibility.Visible;
+            Progress.IsIndeterminate = false; Progress.Maximum = selected.Length; Progress.Value = 0;
+            StopButton.Content = "Stop after this file"; StopButton.IsEnabled = true;
+            SizeLabel.Text = "Updating phone files…";
+            try
+            {
+                var result = await FileDeletion.Run(selected, confirmed: true, deleteVerified: phone.DeleteVerified,
+                    shouldStop: () => stop,
+                    beforeDelete: (index, entry) => StatusLabel.Text = $"Deleting {index + 1} of {selected.Length} · {entry.Name}",
+                    didDelete: entry => { entries = entries.Where(e => e.ObjectId != entry.ObjectId).ToList(); Progress.Value++; });
+                FilesGrid.SelectedItems.Clear();
+                string summary = $"{result.Deleted.Count} {(result.Deleted.Count == 1 ? "file" : "files")} deleted from your phone{(result.Stopped ? " · Stopped" : "")}.";
+                try { await Load(folder); }
+                catch (Exception error)
+                {
+                    entries = []; ApplyFilter(); SizeLabel.Text = "Folder size unavailable · Refresh to retry";
+                    summary += " Couldn’t refresh the folder: " + error.Message;
+                }
+                StatusLabel.Text = summary + (result.Failure is null ? "" : " " + result.Failure);
+            }
+            finally { deleting = false; Progress.Visibility = StopButton.Visibility = Visibility.Collapsed; }
+        });
     }
 
     private async void Home_Click(object sender, RoutedEventArgs e) => await Navigate("\\");
@@ -223,6 +281,7 @@ public partial class MainWindow : Window
         {
             MessageBox.Show(this, "Use Stop after this file and wait for copying to finish before closing DroidDock.", "Transfer in progress"); return;
         }
+        if (deleting) { MessageBox.Show(this, "Use Stop after this file and wait for deletion to finish before closing DroidDock.", "Deletion in progress"); return; }
         if (busy) { StatusLabel.Text = "Wait for the current phone operation to finish before closing."; return; }
         CancelScan(); busy = true; UpdateControls();
         try { if (!demo) await phone.Disconnect(); }
@@ -232,6 +291,7 @@ public partial class MainWindow : Window
 
 public record FileRow(PhoneEntry Entry, string Size)
 {
+    public string Month => FileMonths.Label(Entry);
     public string DisplayName => (Entry.IsFolder ? "▣  " : "◇  ") + Entry.Name;
     public string Modified => Entry.Modified?.ToString("MMM d, yyyy") ?? "—";
 }

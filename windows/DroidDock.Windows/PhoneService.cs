@@ -39,7 +39,7 @@ public sealed class PhoneService
         foreach (var item in folder.EnumerateFileSystemInfos())
         {
             token.ThrowIfCancellationRequested();
-            entries.Add(new(item.FullName, item.Name, item is MediaDirectoryInfo, item.Length, item.LastWriteTime));
+            entries.Add(new(item.FullName, item.Name, item is MediaDirectoryInfo, item.Length, item.LastWriteTime, item.Id, item.PersistentUniqueId));
         }
         return entries.OrderByDescending(e => e.IsFolder).ThenBy(e => e.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
     }, token);
@@ -65,4 +65,21 @@ public sealed class PhoneService
     });
 
     public Task Disconnect() => Work(() => { device?.Dispose(); device = null; return true; });
+
+    public Task DeleteVerified(PhoneEntry expected) => Work(() =>
+    {
+        if (expected.IsFolder || string.IsNullOrEmpty(expected.ObjectId)) throw new IOException("Select individual files to delete.");
+        var current = Device.GetFileInfo(expected.Path);
+        current.Refresh();
+        FileDeletion.RequireMatch(expected, new(current.FullName, current.Name, false, current.Length,
+            current.LastWriteTime, current.Id, current.PersistentUniqueId));
+        Device.DeleteFile(expected.Path); // WPD non-recursive file deletion.
+        // A successful enumeration is necessary: a failed lookup can mean a
+        // disconnected device, not a successfully removed file.
+        var parent = Path.GetDirectoryName(expected.Path) ?? "\\";
+        var remaining = Device.GetDirectoryInfo(parent).EnumerateFileSystemInfos().ToList();
+        if (remaining.Any(item => item.Id == expected.ObjectId))
+            throw new IOException("The phone still reports this file. Refresh before retrying.");
+        return true;
+    });
 }

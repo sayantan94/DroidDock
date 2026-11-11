@@ -7,6 +7,7 @@ final class MTPStore: ObservableObject {
     @Published var connected = false
     @Published var busy = false
     @Published var transferring = false
+    @Published var deleting = false
     @Published var deviceName = "Android files"
     @Published var storages: [RemoteStorage] = []
     @Published var storageID: UInt32 = 0
@@ -14,6 +15,7 @@ final class MTPStore: ObservableObject {
     @Published var entries: [RemoteFile] = []
     @Published var selection: Set<UInt32> = []
     @Published var search = ""
+    @Published var groupByMonth = true
     @Published var error: String?
     @Published var message: String?
     @Published var fraction = 0.0
@@ -30,6 +32,11 @@ final class MTPStore: ObservableObject {
     var parentID: UInt32 { path.last?.id ?? UInt32.max }
     var visible: [RemoteFile] { entries.filter { search.isEmpty || $0.name.localizedCaseInsensitiveContains(search) } }
     var selectedFiles: [RemoteFile] { entries.filter { !$0.isFolder && selection.contains($0.id) } }
+    var visibleFolders: [RemoteFile] { visible.filter(\.isFolder) }
+    var monthGroups: [(month: FileMonth, files: [RemoteFile])] {
+        Dictionary(grouping: visible.filter { !$0.isFolder }, by: { FileMonth(date: $0.date) })
+            .map { (month: $0.key, files: $0.value) }.sorted { $0.month > $1.month }
+    }
 
     func connect() async {
         guard !busy else { return }
@@ -46,7 +53,7 @@ final class MTPStore: ObservableObject {
     }
 
     func disconnect() async {
-        guard !transferring else { return }
+        guard !transferring, !deleting else { return }
         cancelSizeScan()
         await service.disconnect()
         connected = false; entries = []; selection = []; path = []
@@ -113,6 +120,51 @@ final class MTPStore: ObservableObject {
         panel.begin { [weak self] response in
             guard response == .OK else { return }
             Task { @MainActor in self?.send(panel.urls) }
+        }
+    }
+
+    func confirmDeleteSelected() {
+        let files = selectedFiles
+        guard connected, !busy, !files.isEmpty else { return }
+        let storage = storageID, parent = parentID
+        let targets = files.map { DeletionTarget(id: String($0.id), location: "\(storage)/\(parent)", name: $0.name, bytes: $0.size, isFolder: $0.isFolder) }
+        busy = true; cancelSizeScan()
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = "Delete \(files.count) \(files.count == 1 ? "file" : "files") from your phone?"
+        let folder = ([storages.first(where: { $0.id == storage })?.name ?? "Phone storage"] + path.map(\.name)).joined(separator: " / ")
+        alert.informativeText = "\(deviceName) · \(folder)\n\nThese files will be permanently deleted from the phone. They will not go to Trash, and DroidDock cannot undo this. Copies on your Mac are kept."
+        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: "Delete permanently").hasDestructiveAction = true
+        let scroll = NSScrollView(frame: NSRect(x: 0, y: 0, width: 440, height: 170))
+        scroll.hasVerticalScroller = true; scroll.borderType = .bezelBorder
+        let names = NSTextView(frame: scroll.bounds)
+        names.isEditable = false; names.isSelectable = true
+        names.font = .systemFont(ofSize: 12); names.textContainerInset = NSSize(width: 8, height: 8)
+        names.string = files.map { "\($0.name)  (\(ByteCountFormatter.string(fromByteCount: Int64(clamping: $0.size), countStyle: .file)))" }.joined(separator: "\n")
+        names.isVerticallyResizable = true; names.textContainer?.widthTracksTextView = true
+        scroll.documentView = names; alert.accessoryView = scroll
+        guard alert.runModal() == .alertSecondButtonReturn else { busy = false; calculateSizes(); return }
+        deleting = true; stopRequested = false; error = nil; message = nil
+        total = targets.count; completed = 0; fraction = 0
+        Task {
+            let result = await FileDeletion.run(targets: targets, confirmed: true,
+                shouldStop: { self.stopRequested },
+                beforeDelete: { index, target in self.completed = index; self.currentFile = target.name },
+                deleteVerified: { try await self.service.deleteVerified($0, storage: storage, parent: parent) },
+                didDelete: { target in
+                    if let id = UInt32(target.id) { self.entries.removeAll { $0.id == id }; self.selection.remove(id) }
+                    self.completed += 1
+                })
+            selection = []
+            var issues = result.failure.map { [$0] } ?? []
+            do { entries = try await service.list(storage: storage, parent: parent) }
+            catch { entries = []; issues.append("Couldn’t refresh the folder: \(error.localizedDescription)") }
+            message = "\(result.deleted.count) \(result.deleted.count == 1 ? "file" : "files") deleted from your phone\(result.stopped ? " · Stopped" : "")."
+            error = issues.isEmpty ? nil : issues.joined(separator: "\n")
+            deleting = false; busy = false; currentFile = ""
+            if issues.isEmpty { calculateSizes() }
+            else { folderSizes = [:]; sizeError = "Refresh the folder to recalculate its size." }
         }
     }
 

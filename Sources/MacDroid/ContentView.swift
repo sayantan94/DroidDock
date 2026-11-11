@@ -110,7 +110,7 @@ struct ContentView: View {
             Spacer(minLength: 20)
             VStack(alignment: .leading, spacing: 9) {
                 Label("Just your phone and Mac.", systemImage: "cable.connector").font(.system(size: 11, weight: .medium))
-                Text("Full-quality copies.\nYour originals stay on your phone.")
+                Text("Full-quality copies.\nDelete only when you choose.")
                     .font(.system(size: 11)).foregroundStyle(.secondary).lineSpacing(3)
             }.padding(15).frame(maxWidth: .infinity, alignment: .leading)
                 .background(Palette.subtle, in: RoundedRectangle(cornerRadius: 12)).padding(16)

@@ -179,6 +179,43 @@ final class MTPService: @unchecked Sendable {
         }
     }
 
+    func deleteVerified(_ expected: DeletionTarget, storage: UInt32, parent: UInt32) async throws {
+        try await work { [self] in
+            guard let device else { throw ImportError.disconnected }
+            guard let id = UInt32(expected.id), id != 0, id != UInt32.max, !expected.isFolder else {
+                throw MTPFailure(message: "Select individual files to delete.")
+            }
+            // Query the device directly: libmtp's file metadata can be cached.
+            LIBMTP_Clear_Errorstack(device)
+            let namePointer = LIBMTP_Get_String_From_Object(device, id, LIBMTP_PROPERTY_ObjectFileName)
+            defer { free(namePointer) }
+            let bytes = LIBMTP_Get_u64_From_Object(device, id, LIBMTP_PROPERTY_ObjectSize, UInt64.max)
+            let actualStorage = LIBMTP_Get_u32_From_Object(device, id, LIBMTP_PROPERTY_StorageID, 0)
+            let actualParent = LIBMTP_Get_u32_From_Object(device, id, LIBMTP_PROPERTY_ParentObject, UInt32.max)
+            let format = LIBMTP_Get_u16_From_Object(device, id, LIBMTP_PROPERTY_ObjectFormat, 0)
+            guard LIBMTP_Get_Errorstack(device) == nil, let namePointer, format != 0 else {
+                throw failure("Couldn’t verify this file before deletion")
+            }
+            let normalizedParent = actualParent == 0 ? UInt32.max : actualParent
+            let current = DeletionTarget(id: String(id), location: "\(actualStorage)/\(normalizedParent)",
+                name: String(cString: namePointer), bytes: bytes, isFolder: format == 0x3001) // MTP association/folder format
+            try expected.requireMatch(current)
+            guard expected.location == "\(storage)/\(parent)" else { throw MTPFailure(message: "The folder changed. Select the file again.") }
+            guard LIBMTP_Delete_Object(device, id) == 0 else { throw failure("Couldn’t delete \(expected.name)") }
+
+            // Do not treat a failed metadata lookup as proof of deletion: it
+            // could be a disconnected phone. Read fresh child IDs instead.
+            LIBMTP_Clear_Errorstack(device)
+            var handles: UnsafeMutablePointer<UInt32>?
+            let count = LIBMTP_Get_Children(device, storage, parent, &handles)
+            defer { free(handles) }
+            guard count >= 0, count == 0 || handles != nil else { throw failure("Delete was sent, but its result could not be verified. Refresh before retrying") }
+            if let handles, UnsafeBufferPointer(start: handles, count: Int(count)).contains(id) {
+                throw MTPFailure(message: "The phone still reports \(expected.name). Refresh before retrying.")
+            }
+        }
+    }
+
     func upload(_ source: URL, storage: UInt32, parent: UInt32, progress: @escaping (Double) -> Void) async throws -> String {
         try await work { [self] in
             guard let device else { throw ImportError.disconnected }

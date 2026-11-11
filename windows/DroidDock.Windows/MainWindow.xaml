@@ -17,7 +17,7 @@
         <StackPanel VerticalAlignment="Bottom">
           <TextBlock Text="Just a cable." FontSize="17" FontWeight="SemiBold" Margin="0,0,0,8"/>
           <TextBlock Text="Unlock your phone and choose File transfer / Android Auto in its USB notification." TextWrapping="Wrap" Foreground="#657669" LineHeight="21"/>
-          <TextBlock Text="DroidDock for Windows · 0.1" FontSize="10" Foreground="#657669" Margin="0,25,0,0"/>
+          <TextBlock Text="DroidDock for Windows · 0.2" FontSize="10" Foreground="#657669" Margin="0,25,0,0"/>
         </StackPanel>
       </DockPanel>
     </Border>
@@ -25,6 +25,9 @@
       <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
       <StackPanel><TextBlock Text="Your phone, folder by folder." FontSize="27" FontWeight="SemiBold"/><TextBlock Text="Browse your storage. Bring your files home." Foreground="#657669" Margin="0,8,0,24"/></StackPanel>
       <DockPanel Grid.Row="1" Margin="0,0,0,16">
+        <ComboBox x:Name="GroupMode" DockPanel.Dock="Right" Width="150" SelectedIndex="0" SelectionChanged="Grouping_Changed" Margin="12,0,0,0" VerticalContentAlignment="Center" ToolTip="Groups all file types in this folder by the phone's modification date.">
+          <ComboBoxItem Content="Modified month"/><ComboBoxItem Content="No grouping"/>
+        </ComboBox>
         <StackPanel DockPanel.Dock="Left" Orientation="Horizontal"><Button x:Name="HomeButton" Content="Storage" Click="Home_Click" IsEnabled="False"/><Button x:Name="UpButton" Content="↑ Up" Click="Up_Click" IsEnabled="False"/><Button x:Name="RefreshButton" Content="Refresh" Click="Refresh_Click" IsEnabled="False"/></StackPanel>
         <TextBlock x:Name="PathLabel" Text="Connect your Android phone to begin" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="10,0,0,0"/>
       </DockPanel>
@@ -37,14 +40,24 @@
         </Grid>
         <StackPanel VerticalAlignment="Center"><TextBlock x:Name="SizeLabel" Text="Everything you keep on your phone." FontWeight="SemiBold"/><TextBlock x:Name="CountLabel" Text="Folder totals include files in every subfolder." Foreground="#657669" FontSize="11" Margin="0,4,0,0"/></StackPanel>
       </DockPanel>
-      <DataGrid x:Name="FilesGrid" Grid.Row="3" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Extended" SelectionUnit="FullRow" CanUserAddRows="False" CanUserDeleteRows="False" CanUserReorderColumns="False" HeadersVisibility="Column" GridLinesVisibility="None" RowHeight="48" ColumnHeaderHeight="36" BorderThickness="0" Background="#FAFBF8" RowBackground="#FFFFFF" AlternatingRowBackground="#F3F6F0" HorizontalScrollBarVisibility="Disabled" MouseDoubleClick="Files_DoubleClick" SelectionChanged="Files_SelectionChanged">
+      <DataGrid VirtualizingPanel.IsVirtualizingWhenGrouping="True" x:Name="FilesGrid" Grid.Row="3" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Extended" SelectionUnit="FullRow" CanUserAddRows="False" CanUserDeleteRows="False" CanUserReorderColumns="False" HeadersVisibility="Column" GridLinesVisibility="None" RowHeight="48" ColumnHeaderHeight="36" BorderThickness="0" Background="#FAFBF8" RowBackground="#FFFFFF" AlternatingRowBackground="#F3F6F0" HorizontalScrollBarVisibility="Disabled" MouseDoubleClick="Files_DoubleClick" SelectionChanged="Files_SelectionChanged">
+        <DataGrid.GroupStyle><GroupStyle>
+          <GroupStyle.HeaderTemplate><DataTemplate><Grid Margin="0,12,0,8">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <StackPanel Orientation="Horizontal"><TextBlock Text="{Binding Name}" FontSize="16" FontWeight="SemiBold"/><TextBlock Text="{Binding ItemCount, StringFormat='{}{0} items'}" Foreground="#657669" Margin="12,0"/></StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal">
+              <StackPanel.Style><Style TargetType="StackPanel"><Style.Triggers><DataTrigger Binding="{Binding Name}" Value="Folders"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></StackPanel.Style>
+              <Button Content="Select month" Click="SelectMonth_Click" Padding="10,5" ToolTip="Select files shown in this month. Search filters apply."/><Button Content="Clear" Click="ClearMonth_Click" Padding="10,5"/>
+            </StackPanel>
+          </Grid></DataTemplate></GroupStyle.HeaderTemplate>
+        </GroupStyle></DataGrid.GroupStyle>
         <DataGrid.Resources><Style TargetType="TextBlock"><Setter Property="VerticalAlignment" Value="Center"/><Setter Property="Margin" Value="10,0"/></Style></DataGrid.Resources>
         <DataGrid.Columns><DataGridTextColumn Header="Name" Binding="{Binding DisplayName}" Width="*"/><DataGridTextColumn Header="Size" Binding="{Binding Size}" Width="140"/><DataGridTextColumn Header="Modified" Binding="{Binding Modified}" Width="135"/></DataGrid.Columns>
       </DataGrid>
       <StackPanel Grid.Row="4" Margin="0,18,0,18"><TextBlock x:Name="StatusLabel" Text="No account, no companion app. Just USB file transfer." TextWrapping="Wrap" Foreground="#657669"/><ProgressBar x:Name="Progress" Height="4" Margin="0,10,0,0" Foreground="#226B57" Visibility="Collapsed"/></StackPanel>
       <Grid Grid.Row="5"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
         <DockPanel Margin="0,0,0,12"><Button x:Name="DestinationButton" DockPanel.Dock="Right" Content="Change…" Click="Destination_Click" Margin="0"/><StackPanel><TextBlock Text="PC DESTINATION" FontSize="10" Foreground="#657669"/><TextBlock x:Name="DestinationLabel" Text="Pictures\DroidDock" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"/></StackPanel></DockPanel>
-        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right"><Button x:Name="StopButton" Content="Stop after this file" Click="Stop_Click" Visibility="Collapsed"/><Button x:Name="SendButton" Content="Send to phone…" Click="Send_Click" IsEnabled="False"/><Button x:Name="CopyButton" Content="Copy to PC" Click="Copy_Click" Background="#226B57" Foreground="White" IsEnabled="False" Margin="0"/></StackPanel>
+        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right"><Button x:Name="StopButton" Content="Stop after this file" Click="Stop_Click" Visibility="Collapsed"/><Button x:Name="DeleteButton" Content="Delete from phone…" Click="Delete_Click" IsEnabled="False" Background="#F7E6E1" Foreground="#A13927"/><Button x:Name="SendButton" Content="Send to phone…" Click="Send_Click" IsEnabled="False"/><Button x:Name="CopyButton" Content="Copy to PC" Click="Copy_Click" Background="#226B57" Foreground="White" IsEnabled="False" Margin="0"/></StackPanel>
       </Grid>
     </Grid>
   </Grid>
