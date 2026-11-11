@@ -22,8 +22,8 @@ under the MIT license, reproduced below. It communicates with Windows Portable
 Devices (WPD) provided by Windows. The self-contained build includes Microsoft's
 [.NET runtime](https://github.com/dotnet/runtime) and
 [WPF](https://github.com/dotnet/wpf), distributed under the MIT license; their
-runtime license and third-party notices are included by the .NET SDK in the
-published output.
+runtime license and third-party notices are copied from the SDK's resolved
+runtime packages into the published output's `licenses` directory.
 
 ### MediaDevices license
 

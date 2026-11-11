@@ -19,10 +19,13 @@ jobs:
         run: |
           bash scripts/build-app.sh release
           ditto -c -k --sequesterRsrc --keepParent dist/DroidDock.app dist/DroidDock-macOS-${{ runner.arch }}.zip
+          python3 scripts/package-usb-sources.py
       - uses: actions/upload-artifact@v4
         with:
           name: DroidDock-macOS-${{ runner.arch }}
-          path: dist/DroidDock-macOS-*.zip
+          path: |
+            dist/DroidDock-macOS-*.zip
+            dist/DroidDock-USB-library-sources.zip
           if-no-files-found: error
   windows:
     runs-on: windows-latest

@@ -1,5 +1,5 @@
 <Window x:Class="DroidDock.Windows.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="DroidDock" Width="1180" Height="790" MinWidth="940" MinHeight="620" Background="#FAFBF8" Foreground="#263B30" FontFamily="Segoe UI" FontSize="13">
-  <Grid x:Name="CanvasRoot">
+  <Grid x:Name="CanvasRoot" Background="#FAFBF8">
     <Grid.ColumnDefinitions><ColumnDefinition Width="240"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
     <Border Background="#EEF3ED" BorderBrush="#DBE3DA" BorderThickness="0,0,1,0" Padding="22,30">
       <DockPanel LastChildFill="True">
@@ -8,7 +8,7 @@
           <TextBlock Text="A little closer to home." Margin="0,6,0,35" Foreground="#657669"/>
           <TextBlock Text="DEVICE" FontSize="10" FontWeight="SemiBold" Foreground="#657669"/>
           <TextBlock x:Name="DeviceLabel" Text="Android phone" FontWeight="SemiBold" FontSize="16" Margin="0,12,0,6" TextWrapping="Wrap"/>
-          <TextBlock x:Name="ConnectionLabel" Text="Connect over USB" Foreground="#657669" Margin="0,0,0,16"/>
+          <TextBlock x:Name="ConnectionLabel" Text="Connect over USB" Foreground="#657669" Margin="0,0,0,16" TextWrapping="Wrap"/>
           <Button x:Name="ConnectButton" Content="Connect file transfer" Click="Connect_Click" Margin="0,0,0,30"/>
           <Border Background="#DCEADD" CornerRadius="8" Padding="14"><TextBlock Text="▣   All files" Foreground="#226B57" FontWeight="SemiBold"/></Border>
           <TextBlock Text="Photos, videos, music,&#10;documents, and downloads." TextWrapping="Wrap" Foreground="#657669" Margin="0,20,0,0" LineHeight="22"/>
