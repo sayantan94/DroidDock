@@ -1,0 +1,14 @@
+.build/
+dist/
+.DS_Store
+.swiftpm/
+artifacts/
+**/bin/
+**/obj/
+.vs/
+.env
+.env.*
+*.user
+*.log
+# One-off local system maintenance, not part of DroidDock.
+scripts/remove-oplus-connect.command

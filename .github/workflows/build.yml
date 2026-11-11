@@ -1,0 +1,55 @@
+name: Build and test
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  macos:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build dependencies
+        run: brew install libmtp pkg-config
+      - name: Test
+        run: swift test
+      - name: Package app
+        run: |
+          bash scripts/build-app.sh release
+          ditto -c -k --sequesterRsrc --keepParent dist/DroidDock.app dist/DroidDock-macOS-${{ runner.arch }}.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DroidDock-macOS-${{ runner.arch }}
+          path: dist/DroidDock-macOS-*.zip
+          if-no-files-found: error
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Test transfer safety and recursive sizes
+        run: dotnet run --project windows/DroidDock.Tests -c Release
+      - name: Publish standalone Windows app
+        run: dotnet publish windows/DroidDock.Windows -c Release -r win-x64 --self-contained true -o dist/windows
+      - name: Smoke test and capture sample UI
+        shell: pwsh
+        run: |
+          $capturePath = Join-Path $pwd 'dist/windows-files.png'
+          $process = Start-Process -FilePath 'dist/windows/DroidDock.exe' -ArgumentList @('--screenshot', "`"$capturePath`"") -PassThru
+          if (-not $process.WaitForExit(60000)) { $process.Kill(); throw 'Screenshot smoke test timed out' }
+          if ($process.ExitCode -ne 0 -or -not (Test-Path $capturePath)) { throw 'App startup or screenshot export failed' }
+          Compress-Archive -Path dist/windows/* -DestinationPath dist/DroidDock-Windows-x64.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DroidDock-Windows-x64
+          path: dist/DroidDock-Windows-x64.zip
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: dist/windows-files.png
+          if-no-files-found: error

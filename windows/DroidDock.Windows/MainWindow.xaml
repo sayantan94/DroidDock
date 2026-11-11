@@ -1,0 +1,45 @@
+<Window x:Class="DroidDock.Windows.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="DroidDock" Width="1180" Height="790" MinWidth="940" MinHeight="620" Background="#FAFBF8" Foreground="#263B30" FontFamily="Segoe UI" FontSize="13">
+  <Grid x:Name="CanvasRoot">
+    <Grid.ColumnDefinitions><ColumnDefinition Width="240"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+    <Border Background="#EEF3ED" BorderBrush="#DBE3DA" BorderThickness="0,0,1,0" Padding="22,30">
+      <DockPanel LastChildFill="True">
+        <StackPanel DockPanel.Dock="Top">
+          <TextBlock Text="⇄  DroidDock" FontSize="26" FontWeight="SemiBold" Foreground="#226B57"/>
+          <TextBlock Text="A little closer to home." Margin="0,6,0,35" Foreground="#657669"/>
+          <TextBlock Text="DEVICE" FontSize="10" FontWeight="SemiBold" Foreground="#657669"/>
+          <TextBlock x:Name="DeviceLabel" Text="Android phone" FontWeight="SemiBold" FontSize="16" Margin="0,12,0,6" TextWrapping="Wrap"/>
+          <TextBlock x:Name="ConnectionLabel" Text="Connect over USB" Foreground="#657669" Margin="0,0,0,16"/>
+          <Button x:Name="ConnectButton" Content="Connect file transfer" Click="Connect_Click" Margin="0,0,0,30"/>
+          <Border Background="#DCEADD" CornerRadius="8" Padding="14"><TextBlock Text="▣   All files" Foreground="#226B57" FontWeight="SemiBold"/></Border>
+          <TextBlock Text="Photos, videos, music,&#10;documents, and downloads." TextWrapping="Wrap" Foreground="#657669" Margin="0,20,0,0" LineHeight="22"/>
+          <TextBlock x:Name="DemoLabel" Text="DEMO · SAMPLE FILES" Foreground="#226B57" FontWeight="SemiBold" FontSize="10" Margin="0,24,0,0" Visibility="Collapsed"/>
+        </StackPanel>
+        <StackPanel VerticalAlignment="Bottom">
+          <TextBlock Text="Just a cable." FontSize="17" FontWeight="SemiBold" Margin="0,0,0,8"/>
+          <TextBlock Text="Unlock your phone and choose File transfer / Android Auto in its USB notification." TextWrapping="Wrap" Foreground="#657669" LineHeight="21"/>
+          <TextBlock Text="DroidDock for Windows · 0.1" FontSize="10" Foreground="#657669" Margin="0,25,0,0"/>
+        </StackPanel>
+      </DockPanel>
+    </Border>
+    <Grid Grid.Column="1" Margin="30,30,30,22">
+      <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+      <StackPanel><TextBlock Text="Your phone, folder by folder." FontSize="27" FontWeight="SemiBold"/><TextBlock Text="Browse your storage. Bring your files home." Foreground="#657669" Margin="0,8,0,24"/></StackPanel>
+      <DockPanel Grid.Row="1" Margin="0,0,0,16">
+        <StackPanel DockPanel.Dock="Left" Orientation="Horizontal"><Button x:Name="HomeButton" Content="Storage" Click="Home_Click" IsEnabled="False"/><Button x:Name="UpButton" Content="↑ Up" Click="Up_Click" IsEnabled="False"/><Button x:Name="RefreshButton" Content="Refresh" Click="Refresh_Click" IsEnabled="False"/></StackPanel>
+        <TextBlock x:Name="PathLabel" Text="Connect your Android phone to begin" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="10,0,0,0"/>
+      </DockPanel>
+      <DockPanel Grid.Row="2" Margin="0,0,0,14">
+        <TextBox x:Name="SearchBox" DockPanel.Dock="Right" Width="200" TextChanged="Search_Changed" ToolTip="Search this folder" AutomationProperties.Name="Search this folder"/>
+        <StackPanel VerticalAlignment="Center"><TextBlock x:Name="SizeLabel" Text="Everything you keep on your phone." FontWeight="SemiBold"/><TextBlock x:Name="CountLabel" Text="Folder totals include files in every subfolder." Foreground="#657669" FontSize="11" Margin="0,4,0,0"/></StackPanel>
+      </DockPanel>
+      <DataGrid x:Name="FilesGrid" Grid.Row="3" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Extended" SelectionUnit="FullRow" CanUserAddRows="False" CanUserDeleteRows="False" CanUserReorderColumns="False" HeadersVisibility="Column" GridLinesVisibility="None" RowHeight="48" ColumnHeaderHeight="36" BorderThickness="0" Background="#FAFBF8" RowBackground="#FFFFFF" AlternatingRowBackground="#F3F6F0" HorizontalScrollBarVisibility="Disabled" MouseDoubleClick="Files_DoubleClick" SelectionChanged="Files_SelectionChanged">
+        <DataGrid.Columns><DataGridTextColumn Header="Name" Binding="{Binding DisplayName}" Width="*"/><DataGridTextColumn Header="Size" Binding="{Binding Size}" Width="140"/><DataGridTextColumn Header="Modified" Binding="{Binding Modified}" Width="135"/></DataGrid.Columns>
+      </DataGrid>
+      <StackPanel Grid.Row="4" Margin="0,18,0,18"><TextBlock x:Name="StatusLabel" Text="No account, no companion app. Just USB file transfer." TextWrapping="Wrap" Foreground="#657669"/><ProgressBar x:Name="Progress" Height="4" Margin="0,10,0,0" Foreground="#226B57" Visibility="Collapsed"/></StackPanel>
+      <Grid Grid.Row="5"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+        <DockPanel Margin="0,0,0,12"><Button x:Name="DestinationButton" DockPanel.Dock="Right" Content="Change…" Click="Destination_Click" Margin="0"/><StackPanel><TextBlock Text="PC DESTINATION" FontSize="10" Foreground="#657669"/><TextBlock x:Name="DestinationLabel" Text="Pictures\DroidDock" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"/></StackPanel></DockPanel>
+        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right"><Button x:Name="StopButton" Content="Stop after this file" Click="Stop_Click" Visibility="Collapsed"/><Button x:Name="SendButton" Content="Send to phone…" Click="Send_Click" IsEnabled="False"/><Button x:Name="CopyButton" Content="Copy to PC" Click="Copy_Click" Background="#226B57" Foreground="White" IsEnabled="False" Margin="0"/></StackPanel>
+      </Grid>
+    </Grid>
+  </Grid>
+</Window>
